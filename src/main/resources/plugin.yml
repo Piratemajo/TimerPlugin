@@ -1,0 +1,28 @@
+name: TimerPlugin
+version: '${version}'
+main: es.javier.timerPlugin.TimerPlugin
+api-version: '1.21'
+folia-supported: true
+author: Piratemajo
+description: "Plugin de contadores de bloques minecraft"
+commands:
+  gettimer:
+    description: Da un item de temporizador avanzado
+    usage: /gettimer
+    permission: op
+  settimer:
+    description: Configura el tiempo del temporizador
+    usage: /settimer <tiempo> <unidad>
+    permission: op
+  timerreload:
+    description: Reload configuracion
+    usage: /timerreload
+    permission: op
+  timersetmaterial:
+    description: Cambiar el material
+    usage: /timersetmaterial <número|separador> <material>
+    permission: op
+permissions:
+  timerplugin.admin:
+    description: Permite usar comandos administrativos de temporizadores
+    default: op

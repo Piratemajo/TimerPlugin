@@ -1,0 +1,10 @@
+# TimerPlugin Configuration
+# Autor Piratemajo
+# Materiales para los números del temporizador
+number-material: IRON_BLOCK
+
+# Materiales para los separadores (puntos) del temporizador
+separator-material: REDSTONE_BLOCK
+
+# Lista de materiales válidos (solo bloques):
+# https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
