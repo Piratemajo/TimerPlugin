@@ -20,13 +20,11 @@ Un plugin avanzado para crear temporizadores visuales en Minecraft con displays 
 
 ## Comandos
 
-### Para jugadores:
+### Para administradores:
 - `/gettimer` - Obtiene un item de temporizador avanzado
 - `/settimer <tiempo> <unidad>` - Configura el tiempo del temporizador
   - Unidades: `s` (segundos), `m` (minutos), `h` (horas), `d` (días)
   - Ejemplo: `/settimer 10 m` - Configura un temporizador de 10 minutos
-
-### Para administradores:
 - `/timerreload` - Recarga la configuración del plugin (permiso: `timerplugin.reload`)
 - `/timersetmaterial <tipo> <material>` - Cambia el material del display (permiso: `timerplugin.setmaterial`)
   - Tipos: `número` (o `numero`), `separador`
