@@ -477,15 +477,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         return timerItem;
     }
 
-    private int convertToSeconds(int time, String unit) {
-        switch (unit) {
-            case "s": return time;
-            case "m": return time * 60;
-            case "h": return time * 3600;
-            case "d": return time * 86400;
-            default: return 60;
-        }
-    }
+
 
     private String formatTime(int seconds) {
         if (seconds < 60) return seconds + " segundos";
