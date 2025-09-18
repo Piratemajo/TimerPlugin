@@ -1,5 +1,7 @@
 package es.javier.timerPlugin;
 
+import es.javier.timerPlugin.configs.TimerConfig;
+import es.javier.timerPlugin.data.TimerData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -34,14 +36,14 @@ public class TimerPlugin extends JavaPlugin implements Listener {
     private final Map<Location, TimerData> activeTimers = new ConcurrentHashMap<>();
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, TimerConfig> playerSelections = new ConcurrentHashMap<>();
-    private final Map<Integer, boolean[][]> numberPatterns = new HashMap<>();
+    private static final Map<Integer, boolean[][]> numberPatterns = new HashMap<>();
     private final Set<Location> pendingUpdates = ConcurrentHashMap.newKeySet();
     private BukkitRunnable globalTimerTask;
 
-    private FileConfiguration config;
+    private static FileConfiguration config;
     private File configFile;
-    private Material numberMaterial;
-    private Material separatorMaterial;
+    private static Material numberMaterial;
+    private static Material separatorMaterial;
 
     @Override
     public void onEnable() {
@@ -80,7 +82,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         loadMaterialsFromConfig();
     }
 
-    private void loadMaterialsFromConfig() {
+    public void loadMaterialsFromConfig() {
         try {
             String numberMaterialName = config.getString("number-material", "IRON_BLOCK");
             String separatorMaterialName = config.getString("separator-material", "REDSTONE_BLOCK");
@@ -315,7 +317,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         player.sendMessage(ChatColor.GREEN + "Temporizador colocado! Se activará en " + formatTime(config.getTotalSeconds()) + ".");
     }
 
-    private void updateDisplay(Location location, int totalSeconds) {
+    public static void updateDisplay(Location location, int totalSeconds) {
         int days = totalSeconds / 86400;
         int hours = (totalSeconds % 86400) / 3600;
         int minutes = (totalSeconds % 3600) / 60;
@@ -329,7 +331,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         displayTimeWithBlocks(location, daysDigits, hoursDigits, minutesDigits, secondsDigits);
     }
 
-    private void displayTimeWithBlocks(Location location, int[] days, int[] hours, int[] minutes, int[] seconds) {
+    private static void displayTimeWithBlocks(Location location, int[] days, int[] hours, int[] minutes, int[] seconds) {
         World world = location.getWorld();
         int baseX = location.getBlockX();
         int baseY = location.getBlockY() + 2;
@@ -363,7 +365,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         displayDigitWithBlocks(world, baseX + 26, baseY, baseZ, seconds[1]);
     }
 
-    private void displayDigitWithBlocks(World world, int x, int y, int z, int digit) {
+    private static void displayDigitWithBlocks(World world, int x, int y, int z, int digit) {
         boolean[][] pattern = numberPatterns.get(digit);
         if (pattern == null) return;
 
@@ -379,7 +381,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void displaySeparatorWithBlocks(World world, int x, int y, int z) {
+    private static void displaySeparatorWithBlocks(World world, int x, int y, int z) {
         for (int dy = 0; dy < 5; dy++) {
             Location blockLoc1 = new Location(world, x, y + (4 - dy), z);
             Location blockLoc2 = new Location(world, x + 2, y + (4 - dy), z);
@@ -394,7 +396,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private void clearDisplay(Location location) {
+    private static void clearDisplay(Location location) {
         World world = location.getWorld();
         int baseX = location.getBlockX();
         int baseY = location.getBlockY() + 2;
@@ -414,7 +416,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private int[] getDigits(int number, int digits) {
+    private static int[] getDigits(int number, int digits) {
         int[] result = new int[digits];
         String numStr = String.format("%0" + digits + "d", Math.min((int)Math.pow(10, digits) - 1, Math.max(0, number)));
         for (int i = 0; i < digits; i++) {
@@ -457,112 +459,10 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         return false;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("gettimer")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("Solo jugadores pueden usar este comando!");
-                return true;
-            }
 
-            Player player = (Player) sender;
-            ItemStack timerItem = createTimerItem();
-            player.getInventory().addItem(timerItem);
-            player.sendMessage(ChatColor.GREEN + "Has recibido un temporizador avanzado!");
-            return true;
-        }
-        else if (command.getName().equalsIgnoreCase("settimer")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("Solo jugadores pueden usar este comando!");
-                return true;
-            }
 
-            Player player = (Player) sender;
 
-            if (args.length < 2) {
-                player.sendMessage(ChatColor.RED + "Uso: /settimer <tiempo> <unidad>");
-                player.sendMessage(ChatColor.RED + "Unidades: s (segundos), m (minutos), h (horas), d (días)");
-                return true;
-            }
-
-            try {
-                int time = Integer.parseInt(args[0]);
-                String unit = args[1].toLowerCase();
-
-                int seconds = convertToSeconds(time, unit);
-                if (seconds <= 0) {
-                    player.sendMessage(ChatColor.RED + "El tiempo debe ser mayor a 0.");
-                    return true;
-                }
-
-                playerSelections.put(player.getUniqueId(), new TimerConfig(seconds));
-                player.sendMessage(ChatColor.GREEN + "Temporizador configurado para " + time + unit + " (" + formatTime(seconds) + ")");
-
-            } catch (NumberFormatException e) {
-                player.sendMessage(ChatColor.RED + "El tiempo debe ser un número válido.");
-            }
-            return true;
-        }
-        else if (command.getName().equalsIgnoreCase("timerreload")) {
-            if (!sender.hasPermission("timerplugin.reload")) {
-                sender.sendMessage(ChatColor.RED + "No tienes permiso para recargar la configuración.");
-                return true;
-            }
-
-            reloadConfiguration();
-            sender.sendMessage(ChatColor.GREEN + "Configuración del TimerPlugin recargada correctamente.");
-            return true;
-        }
-        else if (command.getName().equalsIgnoreCase("timersetmaterial")) {
-            if (!sender.hasPermission("timerplugin.setmaterial")) {
-                sender.sendMessage(ChatColor.RED + "No tienes permiso para cambiar los materiales.");
-                return true;
-            }
-
-            if (args.length < 2) {
-                sender.sendMessage(ChatColor.RED + "Uso: /timersetmaterial <número|separador> <material>");
-                sender.sendMessage(ChatColor.RED + "Ejemplo: /timersetmaterial número GOLD_BLOCK");
-                return true;
-            }
-
-            String type = args[0].toLowerCase();
-            String materialName = args[1].toUpperCase();
-            Material material = Material.matchMaterial(materialName);
-
-            if (material == null || !material.isBlock()) {
-                sender.sendMessage(ChatColor.RED + "Material '" + materialName + "' no válido o no es un bloque.");
-                return true;
-            }
-
-            if (type.equals("número") || type.equals("numero")) {
-                config.set("number-material", materialName);
-                numberMaterial = material;
-                sender.sendMessage(ChatColor.GREEN + "Material de números cambiado a: " + materialName);
-            } else if (type.equals("separador")) {
-                config.set("separator-material", materialName);
-                separatorMaterial = material;
-                sender.sendMessage(ChatColor.GREEN + "Material de separadores cambiado a: " + materialName);
-            } else {
-                sender.sendMessage(ChatColor.RED + "Tipo no válido. Usa 'número' o 'separador'.");
-                return true;
-            }
-
-            saveConfig();
-
-            // Actualizar displays existentes
-            for (Location location : activeTimers.keySet()) {
-                if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
-                    TimerData timerData = activeTimers.get(location);
-                    updateDisplay(location, timerData.getTimeLeft());
-                }
-            }
-
-            return true;
-        }
-        return false;
-    }
-
-    private ItemStack createTimerItem() {
+    public static ItemStack createTimerItem() {
         ItemStack timerItem = new ItemStack(Material.CLOCK);
         ItemMeta meta = timerItem.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + "Temporizador Avanzado");
@@ -594,31 +494,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         return (seconds / 86400) + " días, " + ((seconds % 86400) / 3600) + " horas";
     }
 
-    private static class TimerData {
-        private int timeLeft;
 
-        public TimerData(int initialTime) {
-            this.timeLeft = initialTime;
-        }
 
-        public int getTimeLeft() {
-            return timeLeft;
-        }
 
-        public void decrement() {
-            if (timeLeft > 0) timeLeft--;
-        }
-    }
-
-    private static class TimerConfig {
-        private final int totalSeconds;
-
-        public TimerConfig(int totalSeconds) {
-            this.totalSeconds = totalSeconds;
-        }
-
-        public int getTotalSeconds() {
-            return totalSeconds;
-        }
-    }
 }
