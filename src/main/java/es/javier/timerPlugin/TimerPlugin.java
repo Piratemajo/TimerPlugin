@@ -1,5 +1,9 @@
 package es.javier.timerPlugin;
 
+import es.javier.timerPlugin.commands.GetTimerCommand;
+import es.javier.timerPlugin.commands.SetTimerCommand;
+import es.javier.timerPlugin.commands.TimerMaterialCommand;
+import es.javier.timerPlugin.commands.TimerReloadCommand;
 import es.javier.timerPlugin.configs.TimerConfig;
 import es.javier.timerPlugin.data.TimerData;
 import org.bukkit.*;
@@ -49,13 +53,17 @@ public class TimerPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         // Cargar configuración
         setupConfig();
-
         getServer().getPluginManager().registerEvents(this, this);
         initializeNumberPatterns();
         startGlobalTimer();
         getLogger().info("TimerPlugin activado correctamente!");
         getLogger().info("Version del servidor " + getServer().getBukkitVersion());
         getLogger().info("Creador: Piratemajo");
+        // Comandos
+        getCommand("gettimer").setExecutor(new GetTimerCommand());
+        getCommand("settimer").setExecutor(new SetTimerCommand());
+        getCommand("timerreload").setExecutor(new TimerReloadCommand());
+        getCommand("timersetmaterial").setExecutor(new TimerMaterialCommand());
     }
 
     @Override
