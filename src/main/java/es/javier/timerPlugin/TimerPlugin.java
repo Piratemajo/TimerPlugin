@@ -6,10 +6,9 @@ import es.javier.timerPlugin.commands.TimerMaterialCommand;
 import es.javier.timerPlugin.commands.TimerReloadCommand;
 import es.javier.timerPlugin.configs.TimerConfig;
 import es.javier.timerPlugin.data.TimerData;
+import es.javier.timerPlugin.utils.NumberPatterns;
 import org.bukkit.*;
 import org.bukkit.block.Block;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -28,6 +27,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import static es.javier.timerPlugin.utils.NumberPatterns.numberPatterns;
+
 /**
  * @author Piratemajo
  * @version 1.1
@@ -40,12 +41,12 @@ public class TimerPlugin extends JavaPlugin implements Listener {
     private final Map<Location, TimerData> activeTimers = new ConcurrentHashMap<>();
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, TimerConfig> playerSelections = new ConcurrentHashMap<>();
-    private static final Map<Integer, boolean[][]> numberPatterns = new HashMap<>();
     private final Set<Location> pendingUpdates = ConcurrentHashMap.newKeySet();
     private BukkitRunnable globalTimerTask;
-
+    private TimerConfig timerConfig;
     private static FileConfiguration config;
     private File configFile;
+    private NumberPatterns numeros;
     private static Material numberMaterial;
     private static Material separatorMaterial;
 
@@ -54,7 +55,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         // Cargar configuración
         setupConfig();
         getServer().getPluginManager().registerEvents(this, this);
-        initializeNumberPatterns();
+        numeros.initializeNumberPatterns();
         startGlobalTimer();
         getLogger().info("TimerPlugin activado correctamente!");
         getLogger().info("Version del servidor " + getServer().getBukkitVersion());
@@ -78,8 +79,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         }
         activeTimers.clear();
     }
-
-    private void setupConfig() {
+    public void setupConfig() {
         configFile = new File(getDataFolder(), "config.yml");
         if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();
@@ -90,150 +90,8 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         loadMaterialsFromConfig();
     }
 
-    public void loadMaterialsFromConfig() {
-        try {
-            String numberMaterialName = config.getString("number-material", "IRON_BLOCK");
-            String separatorMaterialName = config.getString("separator-material", "REDSTONE_BLOCK");
 
-            numberMaterial = Material.matchMaterial(numberMaterialName);
-            separatorMaterial = Material.matchMaterial(separatorMaterialName);
-
-            // Validar materiales
-            if (numberMaterial == null || !numberMaterial.isBlock()) {
-                getLogger().warning("Material '" + numberMaterialName + "' no válido para números. Usando IRON_BLOCK por defecto.");
-                numberMaterial = Material.IRON_BLOCK;
-            }
-
-            if (separatorMaterial == null || !separatorMaterial.isBlock()) {
-                getLogger().warning("Material '" + separatorMaterialName + "' no válido para separadores. Usando REDSTONE_BLOCK por defecto.");
-                separatorMaterial = Material.REDSTONE_BLOCK;
-            }
-
-            getLogger().info("Materiales cargados: Números=" + numberMaterial + ", Separadores=" + separatorMaterial);
-
-        } catch (Exception e) {
-            getLogger().log(Level.WARNING, "Error cargando configuración, usando valores por defecto", e);
-            numberMaterial = Material.IRON_BLOCK;
-            separatorMaterial = Material.REDSTONE_BLOCK;
-        }
-    }
-
-    public void saveConfig() {
-        try {
-            config.save(configFile);
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "No se pudo guardar la configuración", e);
-        }
-    }
-
-    private void reloadConfiguration() {
-        config = YamlConfiguration.loadConfiguration(configFile);
-        loadMaterialsFromConfig();
-
-        // Actualizar displays existentes
-        for (Location location : activeTimers.keySet()) {
-            if (location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4)) {
-                TimerData timerData = activeTimers.get(location);
-                updateDisplay(location, timerData.getTimeLeft());
-            }
-        }
-    }
-
-    private void initializeNumberPatterns() {
-        // Patrones de números 0-9 (3x5) optimizados
-        numberPatterns.put(0, new boolean[][]{
-                {true, true, true},
-                {true, false, true},
-                {true, false, true},
-                {true, false, true},
-                {true, true, true}
-        });
-
-        numberPatterns.put(1, new boolean[][]{
-                {false, true, false},
-                {true, true, false},
-                {false, true, false},
-                {false, true, false},
-                {true, true, true}
-        });
-
-        numberPatterns.put(2, new boolean[][]{
-                {true, true, true},
-                {false, false, true},
-                {true, true, true},
-                {true, false, false},
-                {true, true, true}
-        });
-
-        numberPatterns.put(3, new boolean[][]{
-                {true, true, true},
-                {false, false, true},
-                {true, true, true},
-                {false, false, true},
-                {true, true, true}
-        });
-
-        numberPatterns.put(4, new boolean[][]{
-                {true, false, true},
-                {true, false, true},
-                {true, true, true},
-                {false, false, true},
-                {false, false, true}
-        });
-
-        numberPatterns.put(5, new boolean[][]{
-                {true, true, true},
-                {true, false, false},
-                {true, true, true},
-                {false, false, true},
-                {true, true, true}
-        });
-
-        numberPatterns.put(6, new boolean[][]{
-                {true, true, true},
-                {true, false, false},
-                {true, true, true},
-                {true, false, true},
-                {true, true, true}
-        });
-
-        numberPatterns.put(7, new boolean[][]{
-                {true, true, true},
-                {false, false, true},
-                {false, false, true},
-                {false, false, true},
-                {false, false, true}
-        });
-
-        numberPatterns.put(8, new boolean[][]{
-                {true, true, true},
-                {true, false, true},
-                {true, true, true},
-                {true, false, true},
-                {true, true, true}
-        });
-
-        numberPatterns.put(9, new boolean[][]{
-                {true, true, true},
-                {true, false, true},
-                {true, true, true},
-                {false, false, true},
-                {true, true, true}
-        });
-    }
-
-    private void startGlobalTimer() {
-        globalTimerTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                processPendingUpdates();
-                updateAllTimers();
-            }
-        };
-        globalTimerTask.runTaskTimer(this, 0L, 20L);
-    }
-
-    private void processPendingUpdates() {
+    public void processPendingUpdates() {
         for (Location location : pendingUpdates) {
             if (activeTimers.containsKey(location)) {
                 TimerData timerData = activeTimers.get(location);
@@ -282,6 +140,57 @@ public class TimerPlugin extends JavaPlugin implements Listener {
             pendingUpdates.add(location);
         }
     }
+
+    public void loadMaterialsFromConfig() {
+        try {
+            String numberMaterialName = config.getString("number-material", "IRON_BLOCK");
+            String separatorMaterialName = config.getString("separator-material", "REDSTONE_BLOCK");
+
+            numberMaterial = Material.matchMaterial(numberMaterialName);
+            separatorMaterial = Material.matchMaterial(separatorMaterialName);
+
+            // Validar materiales
+            if (numberMaterial == null || !numberMaterial.isBlock()) {
+                getLogger().warning("Material '" + numberMaterialName + "' no válido para números. Usando IRON_BLOCK por defecto.");
+                numberMaterial = Material.IRON_BLOCK;
+            }
+
+            if (separatorMaterial == null || !separatorMaterial.isBlock()) {
+                getLogger().warning("Material '" + separatorMaterialName + "' no válido para separadores. Usando REDSTONE_BLOCK por defecto.");
+                separatorMaterial = Material.REDSTONE_BLOCK;
+            }
+
+            getLogger().info("Materiales cargados: Números=" + numberMaterial + ", Separadores=" + separatorMaterial);
+
+        } catch (Exception e) {
+            getLogger().log(Level.WARNING, "Error cargando configuración, usando valores por defecto", e);
+            numberMaterial = Material.IRON_BLOCK;
+            separatorMaterial = Material.REDSTONE_BLOCK;
+        }
+    }
+
+    public void saveConfig() {
+        try {
+            config.save(configFile);
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "No se pudo guardar la configuración", e);
+        }
+    }
+
+
+
+
+    private void startGlobalTimer() {
+        globalTimerTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                processPendingUpdates();
+                updateAllTimers();
+            }
+        };
+        globalTimerTask.runTaskTimer(this, 0L, 20L);
+    }
+
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -374,6 +283,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
     }
 
     private static void displayDigitWithBlocks(World world, int x, int y, int z, int digit) {
+
         boolean[][] pattern = numberPatterns.get(digit);
         if (pattern == null) return;
 
@@ -404,7 +314,7 @@ public class TimerPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    private static void clearDisplay(Location location) {
+    public static void clearDisplay(Location location) {
         World world = location.getWorld();
         int baseX = location.getBlockX();
         int baseY = location.getBlockY() + 2;
